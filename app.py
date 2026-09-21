@@ -1,4 +1,6 @@
 import os
+import re
+import time
 
 import requests
 from dotenv import load_dotenv
@@ -10,6 +12,9 @@ app = Flask(__name__)
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 OMDB_API_KEY = os.getenv("OMDB_API_KEY")
 TMDB_API_URL = "https://api.themoviedb.org/3"
+RATINGS_API_URL = "https://whatson-api.onrender.com"
+RATINGS_CACHE = {}
+RATINGS_CACHE_SECONDS = 6 * 60 * 60
 
 
 def tmdb_get(path, **extra_params):
@@ -20,6 +25,57 @@ def tmdb_get(path, **extra_params):
     )
     response.raise_for_status()
     return response.json()
+
+
+def external_ratings(movie_id):
+    """Read source-specific ratings from What's on? and cache successful results."""
+    cached = RATINGS_CACHE.get(movie_id)
+    if cached and time.monotonic() - cached[0] < RATINGS_CACHE_SECONDS:
+        return cached[1]
+
+    try:
+        response = requests.get(f"{RATINGS_API_URL}/movie/{movie_id}", timeout=7)
+        response.raise_for_status()
+        data = response.json()
+    except (requests.RequestException, ValueError):
+        return {}
+
+    if not isinstance(data, dict) or data.get("id") != movie_id:
+        return {}
+
+    ratings = {}
+    sources = {
+        "imdb": ("imdb", "users_rating", 10),
+        "letterboxd": ("letterboxd", "users_rating", 5),
+        "rotten": ("rotten_tomatoes", "critics_rating", 100),
+        "rotten_audience": ("rotten_tomatoes", "users_rating", 100),
+    }
+    for name, (source, field, maximum) in sources.items():
+        entry = data.get(source) or {}
+        value = entry.get(field) if isinstance(entry, dict) else None
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and 0 <= value <= maximum:
+            ratings[name] = value
+
+    # Construct destination URLs from validated IDs, rather than trusting API links.
+    imdb = data.get("imdb") or {}
+    letterboxd = data.get("letterboxd") or {}
+    rotten = data.get("rotten_tomatoes") or {}
+    imdb_id = imdb.get("id") if isinstance(imdb, dict) else None
+    if isinstance(imdb_id, str) and re.fullmatch(r"tt\d{7,10}", imdb_id):
+        ratings["imdb_url"] = f"https://www.imdb.com/title/{imdb_id}/"
+    letterboxd_id = letterboxd.get("id") if isinstance(letterboxd, dict) else None
+    if isinstance(letterboxd_id, str) and re.fullmatch(r"[a-zA-Z0-9-]+", letterboxd_id):
+        ratings["letterboxd_url"] = f"https://letterboxd.com/film/{letterboxd_id}/"
+    rotten_id = rotten.get("id") if isinstance(rotten, dict) else None
+    if isinstance(rotten_id, str) and re.fullmatch(r"[a-zA-Z0-9_-]+", rotten_id):
+        ratings["rotten_url"] = f"https://www.rottentomatoes.com/m/{rotten_id}"
+
+    ratings["updated_at"] = str(data.get("updated_at") or "")[:10]
+    if len(RATINGS_CACHE) >= 256:
+        oldest_id = min(RATINGS_CACHE, key=lambda key: RATINGS_CACHE[key][0])
+        del RATINGS_CACHE[oldest_id]
+    RATINGS_CACHE[movie_id] = (time.monotonic(), ratings)
+    return ratings
 
 
 def sorted_unique_movies(credits):
@@ -75,9 +131,15 @@ def movie_details(movie_id):
     cast = credits.get("cast", [])[:5]
     recommendations = movie.get("recommendations", {}).get("results", [])[:4]
 
-    # OMDb can add IMDb and Rotten Tomatoes scores when its key is available.
+    ratings = external_ratings(movie_id)
+
+    # An existing OMDb key can fill IMDb or Rotten Tomatoes if the aggregator misses them.
     other_ratings = {}
-    if OMDB_API_KEY and movie.get("imdb_id"):
+    if (
+        OMDB_API_KEY
+        and movie.get("imdb_id")
+        and ("imdb" not in ratings or "rotten" not in ratings)
+    ):
         try:
             response = requests.get(
                 "https://www.omdbapi.com/",
@@ -109,6 +171,7 @@ def movie_details(movie_id):
         cast=cast,
         recommendations=recommendations,
         runtime=runtime,
+        ratings=ratings,
         imdb_rating=other_ratings.get("Internet Movie Database"),
         rotten_rating=other_ratings.get("Rotten Tomatoes"),
     )

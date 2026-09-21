@@ -90,6 +90,9 @@
                 <div><dt>Language</dt><dd>{{ movie.spoken_languages|map(attribute='english_name')|join(', ') or 'Not listed' }}</dd></div>
                 <div><dt>Studios</dt><dd>{{ movie.production_companies|map(attribute='name')|join(', ') or 'Not listed' }}</dd></div>
                 <div><dt>Original title</dt><dd>{{ movie.original_title or movie.title }}</dd></div>
+                <div><dt>Status</dt><dd>{{ movie.status or 'Not listed' }}</dd></div>
+                <div><dt>Budget</dt><dd>{{ '${:,.0f}'.format(movie.budget) if movie.budget else 'Not listed' }}</dd></div>
+                <div><dt>Box office</dt><dd>{{ '${:,.0f}'.format(movie.revenue) if movie.revenue else 'Not listed' }}</dd></div>
             </dl>
         </section>
 
@@ -100,43 +103,47 @@
             <div class="ratings-grid">
                 <div class="score-card tmdb-score">
                     <span class="score-source">TMDB</span>
-                    <strong>{{ '%.1f'|format(movie.vote_average or 0) }}<small>/10</small></strong>
-                    <span class="score-note">Community average</span>
+                    {% if movie.vote_count %}<strong>{{ '%.1f'|format(movie.vote_average) }}<small>/10</small></strong>{% else %}<span class="score-unavailable">No rating yet</span>{% endif %}
+                    <span class="score-note">{{ '{:,}'.format(movie.vote_count or 0) }} votes · <a href="https://www.themoviedb.org/movie/{{ movie.id }}" target="_blank" rel="noopener noreferrer">Open ↗</a></span>
                 </div>
                 <div class="score-card imdb-score">
                     <span class="score-source">IMDb</span>
-                    {% if imdb_rating and imdb_rating != 'N/A' %}
+                    {% if ratings.imdb is defined %}
+                        <strong>{{ '%.1f'|format(ratings.imdb) }}<small>/10</small></strong>
+                    {% elif imdb_rating and imdb_rating != 'N/A' %}
                         <strong>{{ imdb_rating }}</strong>
-                    {% elif movie.imdb_id %}
-                        <a class="score-action" href="https://www.imdb.com/title/{{ movie.imdb_id }}/" target="_blank" rel="noopener noreferrer">View rating ↗</a>
                     {% else %}
-                        <span class="score-unavailable">Not listed</span>
+                        <span class="score-unavailable">No rating yet</span>
                     {% endif %}
-                    <span class="score-note">Audience rating</span>
+                    <span class="score-note">Audience rating · {% if ratings.imdb_url or movie.imdb_id %}<a href="{{ ratings.imdb_url or 'https://www.imdb.com/title/' ~ movie.imdb_id ~ '/' }}" target="_blank" rel="noopener noreferrer">Open ↗</a>{% else %}Not listed{% endif %}</span>
+                </div>
+                <div class="score-card letterboxd-score">
+                    <span class="score-source">Letterboxd</span>
+                    {% if ratings.letterboxd is defined %}
+                        <strong>{{ '%.2f'|format(ratings.letterboxd) }}<small>/5</small></strong>
+                    {% else %}
+                        <span class="score-unavailable">No rating yet</span>
+                    {% endif %}
+                    <span class="score-note">Member rating · <a href="{{ ratings.letterboxd_url or 'https://letterboxd.com/tmdb/' ~ movie.id ~ '/' }}" target="_blank" rel="noopener noreferrer">Open ↗</a></span>
                 </div>
                 <div class="score-card rotten-score">
                     <span class="score-source">Rotten Tomatoes</span>
-                    {% if rotten_rating and rotten_rating != 'N/A' %}
+                    {% if ratings.rotten is defined %}
+                        <strong>{{ ratings.rotten|round|int }}<small>%</small></strong>
+                    {% elif rotten_rating and rotten_rating != 'N/A' %}
                         <strong>{{ rotten_rating }}</strong>
                     {% else %}
-                        <a class="score-action" href="https://www.rottentomatoes.com/search?search={{ movie.title|urlencode }}" target="_blank" rel="noopener noreferrer">View rating ↗</a>
+                        <span class="score-unavailable">No rating yet</span>
                     {% endif %}
-                    <span class="score-note">Critics' Tomatometer</span>
+                    {% if ratings.rotten_audience is defined %}<span class="score-extra">Audience {{ ratings.rotten_audience|round|int }}%</span>{% endif %}
+                    <span class="score-note">Critics · <a href="{{ ratings.rotten_url or 'https://www.rottentomatoes.com/search?search=' ~ movie.title|urlencode }}" target="_blank" rel="noopener noreferrer">Open ↗</a></span>
                 </div>
             </div>
-            {% if imdb_rating or rotten_rating %}
-                <p class="rating-attribution">IMDb and Rotten Tomatoes scores supplied by <a href="https://www.omdbapi.com/" target="_blank" rel="noopener noreferrer">OMDb</a>.</p>
+            {% if ratings.imdb is defined or ratings.letterboxd is defined or ratings.rotten is defined %}
+                <p class="rating-attribution">External ratings via <a href="https://github.com/pierrevano/whatson-api" target="_blank" rel="noopener noreferrer">What's on? API</a>{% if ratings.updated_at %} · API record updated {{ ratings.updated_at }}{% endif %}. Scores may differ from the source sites.{% if (ratings.imdb is not defined and imdb_rating) or (ratings.rotten is not defined and rotten_rating) %} Missing scores via <a href="https://www.omdbapi.com/" target="_blank" rel="noopener noreferrer">OMDb</a>.{% endif %}</p>
+            {% elif imdb_rating or rotten_rating %}
+                <p class="rating-attribution">IMDb and Rotten Tomatoes scores via <a href="https://www.omdbapi.com/" target="_blank" rel="noopener noreferrer">OMDb</a>.</p>
             {% endif %}
-            <div class="letterboxd-panel">
-                <div class="letterboxd-heading">
-                    <p class="eyebrow">LETTERBOXD</p>
-                    <a href="https://letterboxd.com/tmdb/{{ movie.id }}/" target="_blank" rel="noopener noreferrer">Open on Letterboxd ↗</a>
-                </div>
-                <details class="letterboxd-details">
-                    <summary>Show rating chart <span aria-hidden="true">↓</span></summary>
-                    <iframe title="Letterboxd rating for {{ movie.title }}" src="https://embed.letterboxd.com/tmdb/{{ movie.id }}/embed-histogram/?noTitle=true" width="100%" height="300" frameborder="0" scrolling="no" loading="lazy"></iframe>
-                </details>
-            </div>
         </section>
 
         {% if recommendations %}
