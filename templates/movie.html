@@ -132,7 +132,10 @@
                     <p class="eyebrow">LETTERBOXD</p>
                     <a href="https://letterboxd.com/tmdb/{{ movie.id }}/" target="_blank" rel="noopener noreferrer">Open on Letterboxd ↗</a>
                 </div>
-                <iframe title="Letterboxd rating for {{ movie.title }}" src="https://embed.letterboxd.com/tmdb/{{ movie.id }}/embed-histogram/?noTitle=true" width="100%" height="300" frameborder="0" scrolling="no" loading="lazy"></iframe>
+                <details class="letterboxd-details">
+                    <summary>Show rating chart <span aria-hidden="true">↓</span></summary>
+                    <iframe title="Letterboxd rating for {{ movie.title }}" src="https://embed.letterboxd.com/tmdb/{{ movie.id }}/embed-histogram/?noTitle=true" width="100%" height="300" frameborder="0" scrolling="no" loading="lazy"></iframe>
+                </details>
             </div>
         </section>
 

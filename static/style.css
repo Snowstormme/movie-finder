@@ -280,7 +280,9 @@ main.container { padding: 42px 0 80px; }
 .letterboxd-panel .eyebrow { color: #a4d0ae; }
 .letterboxd-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 15px; }
 .letterboxd-heading a { color: #a4d0ae; font-size: 13px; text-underline-offset: 4px; }
-.letterboxd-panel iframe { display: block; max-width: 760px; border: 0; }
+.letterboxd-details summary { width: fit-content; padding: 8px 0; color: #e4e7e7; cursor: pointer; font-size: 14px; font-weight: 650; }
+.letterboxd-details summary:hover { color: #a4d0ae; }
+.letterboxd-details iframe { display: block; max-width: 760px; margin-top: 12px; border: 0; }
 
 .recommendations-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 15px; }
 .recommendation-card {
