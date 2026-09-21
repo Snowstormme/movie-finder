@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cast of {{ movie.title }} · Movie Finder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="site-header">
+        <form action="{{ url_for('search') }}" method="POST" class="search-form" role="search">
+            <label class="visually-hidden" for="movie-search">Movie name</label>
+            <input id="movie-search" type="search" name="movie" placeholder="Search for a movie..." required>
+            <button type="submit">Search</button>
+        </form>
+    </header>
+
+    <main class="container cast-page">
+        <a class="back-link" href="{{ url_for('movie_details', movie_id=movie.id) }}">← Back to {{ movie.title }}</a>
+        <div class="section-heading cast-heading">
+            <h1>Cast of {{ movie.title }}</h1>
+            <span>{{ cast|length }} people</span>
+        </div>
+        {% if cast %}
+            <ul class="full-cast-list">
+                {% for person in cast %}
+                    <li>
+                        <a href="{{ url_for('person_details', person_id=person.id) }}">
+                            {% if person.profile_path %}
+                                <img src="https://image.tmdb.org/t/p/w185{{ person.profile_path }}" alt="" loading="lazy">
+                            {% else %}
+                                <span class="no-poster">No photo</span>
+                            {% endif %}
+                            <span class="cast-person-text">
+                                <strong>{{ person.name }}</strong>
+                                {% if person.character %}<small>{{ person.character }}</small>{% endif %}
+                            </span>
+                            <span aria-hidden="true">↗</span>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="message">No cast is listed for this movie yet.</p>
+        {% endif %}
+    </main>
+</body>
+</html>

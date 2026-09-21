@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ person.name }} · Movie Finder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="site-header">
+        <form action="{{ url_for('search') }}" method="POST" class="search-form" role="search">
+            <label class="visually-hidden" for="movie-search">Movie name</label>
+            <input id="movie-search" type="search" name="movie" placeholder="Search for a movie..." required>
+            <button type="submit">Search</button>
+        </form>
+    </header>
+
+    <main class="container person-page">
+        <a class="back-link" href="{{ url_for('home') }}">← Back to search</a>
+        <div class="person-intro">
+            {% if person.profile_path %}
+                <img class="person-photo" src="https://image.tmdb.org/t/p/w342{{ person.profile_path }}" alt="Photo of {{ person.name }}">
+            {% else %}
+                <div class="person-photo no-poster">No photo available</div>
+            {% endif %}
+            <div class="person-summary">
+                <p class="eyebrow">FILMOGRAPHY</p>
+                <h1>{{ person.name }}</h1>
+                {% if person.place_of_birth %}<p class="person-origin">{{ person.place_of_birth }}</p>{% endif %}
+                <p class="person-credit-count">{{ acting_movies|length }} acting films{% if directed_movies %} · {{ directed_movies|length }} directed films{% endif %}</p>
+            </div>
+        </div>
+
+        {% if acting_movies %}
+            <section class="lower-section">
+                <div class="section-heading"><h2>Films as an actor</h2><span>{{ acting_movies|length }} films</span></div>
+                <ul class="filmography-list">
+                    {% for film in acting_movies %}
+                        <li>
+                            <a href="{{ url_for('movie_details', movie_id=film.id) }}">
+                                {% if film.poster_path %}
+                                    <img src="https://image.tmdb.org/t/p/w185{{ film.poster_path }}" alt="" loading="lazy">
+                                {% else %}
+                                    <span class="no-poster">No poster</span>
+                                {% endif %}
+                                <span class="filmography-text">
+                                    <strong>{{ film.title }}</strong>
+                                    {% if film.character %}<small>As {{ film.character }}</small>{% endif %}
+                                </span>
+                                <span class="filmography-year">{{ film.release_date[:4] if film.release_date else 'TBA' }}</span>
+                                <span class="filmography-arrow" aria-hidden="true">↗</span>
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </section>
+        {% endif %}
+
+        {% if directed_movies %}
+            <section class="lower-section">
+                <div class="section-heading"><h2>Films as a director</h2><span>{{ directed_movies|length }} films</span></div>
+                <ul class="filmography-list">
+                    {% for film in directed_movies %}
+                        <li>
+                            <a href="{{ url_for('movie_details', movie_id=film.id) }}">
+                                {% if film.poster_path %}
+                                    <img src="https://image.tmdb.org/t/p/w185{{ film.poster_path }}" alt="" loading="lazy">
+                                {% else %}
+                                    <span class="no-poster">No poster</span>
+                                {% endif %}
+                                <span class="filmography-text"><strong>{{ film.title }}</strong></span>
+                                <span class="filmography-year">{{ film.release_date[:4] if film.release_date else 'TBA' }}</span>
+                                <span class="filmography-arrow" aria-hidden="true">↗</span>
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </section>
+        {% endif %}
+
+        {% if not acting_movies and not directed_movies %}
+            <p class="message">No films are listed for this person yet.</p>
+        {% endif %}
+    </main>
+</body>
+</html>

@@ -30,20 +30,33 @@
                     <span>{{ movie.release_date[:4] if movie.release_date else 'Year unknown' }}</span>
                     <span class="rating">★ {{ '%.1f'|format(movie.vote_average or 0) }} <small>/ 10 TMDB</small></span>
                 </div>
-                <a class="tmdb-link" href="https://www.themoviedb.org/movie/{{ movie.id }}" target="_blank" rel="noopener noreferrer">View on TMDB <span aria-hidden="true">↗</span></a>
+                {% if movie.tagline %}<p class="tagline">“{{ movie.tagline }}”</p>{% endif %}
+                <div class="source-links">
+                    <a href="https://www.themoviedb.org/movie/{{ movie.id }}" target="_blank" rel="noopener noreferrer">TMDB ↗</a>
+                    {% if movie.imdb_id %}<a href="https://www.imdb.com/title/{{ movie.imdb_id }}/" target="_blank" rel="noopener noreferrer">IMDb ↗</a>{% endif %}
+                </div>
             </section>
 
             <section class="detail-panel about-panel">
                 <p class="eyebrow">THE STORY</p>
                 <h2>About the movie</h2>
                 <p class="overview">{{ movie.overview or 'No description is available for this movie yet.' }}</p>
+                {% if movie.genres %}
+                    <div class="genre-list">
+                        {% for genre in movie.genres %}<span>{{ genre.name }}</span>{% endfor %}
+                    </div>
+                {% endif %}
             </section>
 
             <section class="detail-panel people-panel">
                 <div class="people-group">
                     <p class="eyebrow">BEHIND THE CAMERA</p>
                     <h2>Director</h2>
-                    <p>{{ director or 'Not listed' }}</p>
+                    {% if director %}
+                        <a class="person-link" href="{{ url_for('person_details', person_id=director.id) }}">{{ director.name }} <span aria-hidden="true">↗</span></a>
+                    {% else %}
+                        <p>Not listed</p>
+                    {% endif %}
                 </div>
                 <div class="people-group">
                     <p class="eyebrow">ON SCREEN</p>
@@ -51,15 +64,96 @@
                     {% if cast %}
                         <ul class="cast-list">
                             {% for person in cast %}
-                                <li>{{ person.name }}{% if person.character %}<span>{{ person.character }}</span>{% endif %}</li>
+                                <li>
+                                    <a class="person-link" href="{{ url_for('person_details', person_id=person.id) }}">{{ person.name }} <span aria-hidden="true">↗</span></a>
+                                    {% if person.character %}<small>{{ person.character }}</small>{% endif %}
+                                </li>
                             {% endfor %}
                         </ul>
+                        <a class="all-cast-link" href="{{ url_for('movie_cast', movie_id=movie.id) }}">View all cast →</a>
                     {% else %}
                         <p>Cast not listed</p>
                     {% endif %}
                 </div>
             </section>
         </div>
+
+        <section id="film-facts" class="container lower-section">
+            <div class="section-heading">
+                <h2>Film details</h2>
+                <span>From TMDB</span>
+            </div>
+            <dl class="facts-grid">
+                <div><dt>Release date</dt><dd>{{ movie.release_date or 'Not listed' }}</dd></div>
+                <div><dt>Runtime</dt><dd>{{ runtime or 'Not listed' }}</dd></div>
+                <div><dt>Country</dt><dd>{{ movie.production_countries|map(attribute='name')|join(', ') or 'Not listed' }}</dd></div>
+                <div><dt>Language</dt><dd>{{ movie.spoken_languages|map(attribute='english_name')|join(', ') or 'Not listed' }}</dd></div>
+                <div><dt>Studios</dt><dd>{{ movie.production_companies|map(attribute='name')|join(', ') or 'Not listed' }}</dd></div>
+                <div><dt>Original title</dt><dd>{{ movie.original_title or movie.title }}</dd></div>
+            </dl>
+        </section>
+
+        <section id="ratings" class="container lower-section">
+            <div class="section-heading">
+                <h2>Ratings</h2>
+            </div>
+            <div class="ratings-grid">
+                <div class="score-card tmdb-score">
+                    <span class="score-source">TMDB</span>
+                    <strong>{{ '%.1f'|format(movie.vote_average or 0) }}<small>/10</small></strong>
+                    <span class="score-note">Community average</span>
+                </div>
+                <div class="score-card imdb-score">
+                    <span class="score-source">IMDb</span>
+                    {% if imdb_rating and imdb_rating != 'N/A' %}
+                        <strong>{{ imdb_rating }}</strong>
+                    {% elif movie.imdb_id %}
+                        <a class="score-action" href="https://www.imdb.com/title/{{ movie.imdb_id }}/" target="_blank" rel="noopener noreferrer">View rating ↗</a>
+                    {% else %}
+                        <span class="score-unavailable">Not listed</span>
+                    {% endif %}
+                    <span class="score-note">Audience rating</span>
+                </div>
+                <div class="score-card rotten-score">
+                    <span class="score-source">Rotten Tomatoes</span>
+                    {% if rotten_rating and rotten_rating != 'N/A' %}
+                        <strong>{{ rotten_rating }}</strong>
+                    {% else %}
+                        <a class="score-action" href="https://www.rottentomatoes.com/search?search={{ movie.title|urlencode }}" target="_blank" rel="noopener noreferrer">View rating ↗</a>
+                    {% endif %}
+                    <span class="score-note">Critics' Tomatometer</span>
+                </div>
+            </div>
+            {% if imdb_rating or rotten_rating %}
+                <p class="rating-attribution">IMDb and Rotten Tomatoes scores supplied by <a href="https://www.omdbapi.com/" target="_blank" rel="noopener noreferrer">OMDb</a>.</p>
+            {% endif %}
+            <div class="letterboxd-panel">
+                <div class="letterboxd-heading">
+                    <p class="eyebrow">LETTERBOXD</p>
+                    <a href="https://letterboxd.com/tmdb/{{ movie.id }}/" target="_blank" rel="noopener noreferrer">Open on Letterboxd ↗</a>
+                </div>
+                <iframe title="Letterboxd rating for {{ movie.title }}" src="https://embed.letterboxd.com/tmdb/{{ movie.id }}/embed-histogram/?noTitle=true" width="100%" height="300" frameborder="0" scrolling="no" loading="lazy"></iframe>
+            </div>
+        </section>
+
+        {% if recommendations %}
+            <section id="recommendations" class="container lower-section recommendations-section">
+                <div class="section-heading"><h2>More like this</h2><span>From TMDB</span></div>
+                <div class="recommendations-grid">
+                    {% for suggestion in recommendations %}
+                        <a class="recommendation-card" href="{{ url_for('movie_details', movie_id=suggestion.id) }}">
+                            {% if suggestion.poster_path %}
+                                <img src="https://image.tmdb.org/t/p/w342{{ suggestion.poster_path }}" alt="Poster for {{ suggestion.title }}" loading="lazy">
+                            {% else %}
+                                <span class="no-poster">No poster available</span>
+                            {% endif %}
+                            <span class="recommendation-title">{{ suggestion.title }}</span>
+                            <span class="recommendation-year">{{ suggestion.release_date[:4] if suggestion.release_date else 'Year unknown' }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
     </main>
 </body>
 </html>
