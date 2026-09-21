@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ movie.title }} · Movie Finder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="site-header">
+        <form action="{{ url_for('search') }}" method="POST" class="search-form" role="search">
+            <label class="visually-hidden" for="movie-search">Movie name</label>
+            <input id="movie-search" type="search" name="movie" placeholder="Search for a movie..." required>
+            <button type="submit">Search</button>
+        </form>
+    </header>
+
+    <main>
+        <div class="backdrop"{% if movie.backdrop_path %} style="background-image: linear-gradient(0deg, #101217 0%, rgba(16, 18, 23, .12) 85%), url('https://image.tmdb.org/t/p/original{{ movie.backdrop_path }}')"{% endif %}></div>
+
+        <div class="details-layout container">
+            <section class="film-identity" aria-label="Film details">
+                {% if movie.poster_path %}
+                    <img class="detail-poster" src="https://image.tmdb.org/t/p/w500{{ movie.poster_path }}" alt="Poster for {{ movie.title }}">
+                {% else %}
+                    <div class="detail-poster no-poster">No poster available</div>
+                {% endif %}
+                <h1>{{ movie.title }}</h1>
+                <div class="identity-meta">
+                    <span>{{ movie.release_date[:4] if movie.release_date else 'Year unknown' }}</span>
+                    <span class="rating">★ {{ '%.1f'|format(movie.vote_average or 0) }} <small>/ 10 TMDB</small></span>
+                </div>
+                <a class="tmdb-link" href="https://www.themoviedb.org/movie/{{ movie.id }}" target="_blank" rel="noopener noreferrer">View on TMDB <span aria-hidden="true">↗</span></a>
+            </section>
+
+            <section class="detail-panel about-panel">
+                <p class="eyebrow">THE STORY</p>
+                <h2>About the movie</h2>
+                <p class="overview">{{ movie.overview or 'No description is available for this movie yet.' }}</p>
+            </section>
+
+            <section class="detail-panel people-panel">
+                <div class="people-group">
+                    <p class="eyebrow">BEHIND THE CAMERA</p>
+                    <h2>Director</h2>
+                    <p>{{ director or 'Not listed' }}</p>
+                </div>
+                <div class="people-group">
+                    <p class="eyebrow">ON SCREEN</p>
+                    <h2>Main cast</h2>
+                    {% if cast %}
+                        <ul class="cast-list">
+                            {% for person in cast %}
+                                <li>{{ person.name }}{% if person.character %}<span>{{ person.character }}</span>{% endif %}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>Cast not listed</p>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+    </main>
+</body>
+</html>
